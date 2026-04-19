@@ -6,7 +6,7 @@
     <title>Student Management System</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="theme-dashboard">
     <div class="layout">
         <header class="topbar">
             <div class="brand">
@@ -23,19 +23,24 @@
         </header>
 
         <main class="grid grid-2">
-            <section class="card hero">
+            <section class="card hero card-elevated">
                 <h2>Keep Student Data Accurate and Instantly Accessible.</h2>
                 <p>
                     Add new students, review records, and search quickly from one clean workflow.
                     Every action is connected to your MySQL backend through the same API route.
                 </p>
+                <div class="hero-badges" aria-hidden="true">
+                    <span>Live Database</span>
+                    <span>Fast Search</span>
+                    <span>CRUD Ready</span>
+                </div>
                 <div class="btn-row">
                     <a class="btn btn-primary" href="/add-student.html">Add a Student</a>
                     <a class="btn btn-secondary" href="/view-students.html">Open Records</a>
                 </div>
             </section>
 
-            <section class="card">
+            <section class="card card-elevated">
                 <h2 class="panel-title">Live Snapshot</h2>
                 <div class="stat-grid">
                     <article class="stat">
@@ -64,10 +69,10 @@
                 </ul>
             </section>
 
-            <section class="card">
-                <h2 class="panel-title">Quick Notes</h2>
+            <section class="card checklist-card">
+                <h2 class="panel-title">Deployment Setup</h2>
                 <p class="small-muted">Use environment variables on Vercel for database credentials:</p>
-                <ul>
+                <ul class="check-list">
                     <li><code>DB_HOST</code></li>
                     <li><code>DB_PORT</code></li>
                     <li><code>DB_USER</code></li>

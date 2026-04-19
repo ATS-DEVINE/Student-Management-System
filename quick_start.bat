@@ -16,9 +16,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
+where npm.cmd >nul 2>nul
+if errorlevel 1 (
+    echo npm.cmd was not found in PATH.
+    echo Reinstall Node.js and ensure npm is included.
+    pause
+    exit /b 1
+)
+
 if not exist node_modules (
     echo Installing project dependencies...
-    call npm install
+    call npm.cmd install
     if errorlevel 1 (
         echo Failed to install dependencies.
         pause
@@ -29,4 +37,4 @@ if not exist node_modules (
 echo Starting server at http://localhost:3000 ...
 echo.
 start "" http://localhost:3000
-call npm start
+node server.js
