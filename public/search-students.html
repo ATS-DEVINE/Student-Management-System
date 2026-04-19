@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Students</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="layout">
+        <header class="topbar">
+            <div class="brand">
+                <span class="brand-tag">Smart Search</span>
+                <h1>Search Students</h1>
+                <p>Search by name, email, or course with live backend filtering.</p>
+            </div>
+            <nav class="menu" aria-label="Main navigation">
+                <a href="/index.html">Dashboard</a>
+                <a href="/add-student.html">Add Student</a>
+                <a href="/view-students.html">View Students</a>
+                <a class="active" href="/search-students.html">Search</a>
+            </nav>
+        </header>
+
+        <main class="grid grid-2">
+            <section class="card">
+                <h2 class="section-title">Run a Search</h2>
+                <p class="section-subtitle">Enter any keyword. Example: student name, email domain, or course title.</p>
+
+                <form id="searchForm" class="form-grid">
+                    <div class="form-field">
+                        <label for="searchInput">Keyword</label>
+                        <input id="searchInput" type="text" placeholder="e.g. data science or alex@example.com" required>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-primary" type="submit">Search</button>
+                        <button class="btn btn-secondary" type="button" id="showAllBtn">Show All</button>
+                    </div>
+                </form>
+
+                <div id="searchMessage"></div>
+            </section>
+
+            <section class="card">
+                <h2 class="panel-title">Tips</h2>
+                <div class="helper-box">
+                    <strong>Search works across:</strong>
+                    <ul>
+                        <li>Student name</li>
+                        <li>Email address</li>
+                        <li>Course name</li>
+                    </ul>
+                </div>
+                <p class="small-muted" style="margin-top:12px;">The results below come directly from MySQL using a LIKE query.</p>
+            </section>
+        </main>
+
+        <section class="card" style="margin-top:18px;">
+            <h2 class="panel-title">Search Results</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Course</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr>
+                            <td colspan="5" class="empty-state">Run a search to see matching students.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p id="resultsCount" class="small-muted" style="margin-top:10px;">0 students</p>
+        </section>
+
+        <footer class="footer">
+            Search is powered by the same <code>/api/students</code> endpoint used across the app.
+        </footer>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        const searchForm = document.getElementById('searchForm');
+        const searchInput = document.getElementById('searchInput');
+        const resultsBody = document.getElementById('resultsBody');
+        const resultsCount = document.getElementById('resultsCount');
+        const messageBox = document.getElementById('searchMessage');
+        const showAllBtn = document.getElementById('showAllBtn');
+
+        function renderResults(students) {
+            if (!students.length) {
+                resultsBody.innerHTML = '<tr><td colspan="5" class="empty-state">No matching students found.</td></tr>';
+                resultsCount.textContent = '0 students';
+                return;
+            }
+
+            resultsBody.innerHTML = students.map((student) => `
+                <tr>
+                    <td>${student.id}</td>
+                    <td>${StudentApp.utils.escapeHtml(student.name)}</td>
+                    <td>${StudentApp.utils.escapeHtml(student.email)}</td>
+                    <td>${StudentApp.utils.escapeHtml(student.course)}</td>
+                    <td>${StudentApp.utils.formatDate(student.created_at)}</td>
+                </tr>
+            `).join('');
+
+            resultsCount.textContent = `${students.length} student${students.length === 1 ? '' : 's'}`;
+        }
+
+        async function runSearch(term) {
+            StudentApp.utils.clearMessage(messageBox);
+
+            try {
+                const response = term
+                    ? await StudentApp.api.list(term)
+                    : await StudentApp.api.list();
+
+                renderResults(response.data || []);
+
+                if (term) {
+                    StudentApp.utils.renderMessage(messageBox, 'success', `Search completed for "${term}".`);
+                }
+            } catch (error) {
+                resultsBody.innerHTML = `<tr><td colspan="5" class="empty-state">${StudentApp.utils.escapeHtml(error.message)}</td></tr>`;
+                resultsCount.textContent = '0 students';
+                StudentApp.utils.renderMessage(messageBox, 'error', error.message);
+            }
+        }
+
+        searchForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const term = searchInput.value.trim();
+            runSearch(term);
+        });
+
+        showAllBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            runSearch('');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "studentmanagementsystem",
+  "version": "1.0.0",
+  "description": "A complete Student Management System built with Java, MySQL, HTML, and CSS. This system provides full CRUD operations for managing student records with a clean, responsive web interface.",
+  "main": "server.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"No automated tests configured\"",
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "mysql2": "^3.22.0"
+  }
+}

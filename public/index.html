@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Management System</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="layout">
+        <header class="topbar">
+            <div class="brand">
+                <span class="brand-tag">Campus Dashboard</span>
+                <h1>Student Management System</h1>
+                <p>Modern student records with live database sync.</p>
+            </div>
+            <nav class="menu" aria-label="Main navigation">
+                <a class="active" href="/index.html">Dashboard</a>
+                <a href="/add-student.html">Add Student</a>
+                <a href="/view-students.html">View Students</a>
+                <a href="/search-students.html">Search</a>
+            </nav>
+        </header>
+
+        <main class="grid grid-2">
+            <section class="card hero">
+                <h2>Keep Student Data Accurate and Instantly Accessible.</h2>
+                <p>
+                    Add new students, review records, and search quickly from one clean workflow.
+                    Every action is connected to your MySQL backend through the same API route.
+                </p>
+                <div class="btn-row">
+                    <a class="btn btn-primary" href="/add-student.html">Add a Student</a>
+                    <a class="btn btn-secondary" href="/view-students.html">Open Records</a>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2 class="panel-title">Live Snapshot</h2>
+                <div class="stat-grid">
+                    <article class="stat">
+                        <h3>Total Students</h3>
+                        <p id="totalStudents" class="value">--</p>
+                    </article>
+                    <article class="stat">
+                        <h3>Courses Active</h3>
+                        <p id="totalCourses" class="value">--</p>
+                    </article>
+                    <article class="stat">
+                        <h3>Newest Entry</h3>
+                        <p id="newestStudent" class="value" style="font-size:1rem;">--</p>
+                    </article>
+                    <article class="stat">
+                        <h3>System Health</h3>
+                        <p id="systemHealth" class="value" style="font-size:1rem;">Checking...</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2 class="panel-title">Recent Students</h2>
+                <ul id="recentStudents" class="student-list">
+                    <li><span class="small-muted">Loading data from database...</span></li>
+                </ul>
+            </section>
+
+            <section class="card">
+                <h2 class="panel-title">Quick Notes</h2>
+                <p class="small-muted">Use environment variables on Vercel for database credentials:</p>
+                <ul>
+                    <li><code>DB_HOST</code></li>
+                    <li><code>DB_PORT</code></li>
+                    <li><code>DB_USER</code></li>
+                    <li><code>DB_PASSWORD</code></li>
+                    <li><code>DB_NAME</code></li>
+                </ul>
+                <p class="small-muted">Once configured, the same frontend works locally and on Vercel.</p>
+            </section>
+        </main>
+
+        <footer class="footer">
+            Student Management System | HTML + Node.js + MySQL | Vercel-ready
+        </footer>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        async function loadDashboard() {
+            const totalStudentsEl = document.getElementById('totalStudents');
+            const totalCoursesEl = document.getElementById('totalCourses');
+            const newestStudentEl = document.getElementById('newestStudent');
+            const systemHealthEl = document.getElementById('systemHealth');
+            const recentList = document.getElementById('recentStudents');
+
+            try {
+                const response = await StudentApp.api.list();
+                const students = response.data || [];
+
+                totalStudentsEl.textContent = String(students.length);
+                const courses = new Set(students.map((student) => student.course));
+                totalCoursesEl.textContent = String(courses.size);
+
+                if (students.length > 0) {
+                    newestStudentEl.textContent = students[0].name;
+                } else {
+                    newestStudentEl.textContent = 'No data yet';
+                }
+
+                systemHealthEl.textContent = 'Connected';
+
+                if (students.length === 0) {
+                    recentList.innerHTML = '<li><span class="small-muted">No students found. Add your first student now.</span></li>';
+                    return;
+                }
+
+                const recentMarkup = students.slice(0, 5).map((student) => {
+                    return `
+                        <li>
+                            <div class="student-meta">
+                                <strong>${StudentApp.utils.escapeHtml(student.name)}</strong>
+                                <span>${StudentApp.utils.escapeHtml(student.email)}</span>
+                            </div>
+                            <span class="pill">${StudentApp.utils.escapeHtml(student.course)}</span>
+                        </li>
+                    `;
+                }).join('');
+
+                recentList.innerHTML = recentMarkup;
+            } catch (error) {
+                totalStudentsEl.textContent = '0';
+                totalCoursesEl.textContent = '0';
+                newestStudentEl.textContent = '--';
+                systemHealthEl.textContent = 'Unavailable';
+                recentList.innerHTML = `<li><span class="small-muted">${StudentApp.utils.escapeHtml(error.message)}</span></li>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+</body>
+</html>

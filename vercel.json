@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/add-student", "destination": "/add-student.html" },
+    { "source": "/view-students", "destination": "/view-students.html" },
+    { "source": "/search-students", "destination": "/search-students.html" }
+  ]
+}

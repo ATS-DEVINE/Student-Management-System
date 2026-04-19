@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Students</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="layout">
+        <header class="topbar">
+            <div class="brand">
+                <span class="brand-tag">Student Records</span>
+                <h1>View Students</h1>
+                <p>Browse and manage every record from the live database.</p>
+            </div>
+            <nav class="menu" aria-label="Main navigation">
+                <a href="/index.html">Dashboard</a>
+                <a href="/add-student.html">Add Student</a>
+                <a class="active" href="/view-students.html">View Students</a>
+                <a href="/search-students.html">Search</a>
+            </nav>
+        </header>
+
+        <main class="card">
+            <h2 class="section-title">Registered Students</h2>
+            <p class="section-subtitle">Use quick search to filter by name, email, or course.</p>
+
+            <div class="toolbar">
+                <input id="quickSearch" class="search-input" type="search" placeholder="Search students...">
+                <button id="refreshBtn" class="btn btn-secondary" type="button">Refresh</button>
+                <a class="btn btn-primary" href="/add-student.html">Add Student</a>
+            </div>
+
+            <div id="tableMessage"></div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Course</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTableBody">
+                        <tr>
+                            <td colspan="6" class="empty-state">Loading students...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p id="recordCount" class="small-muted" style="margin-top:10px;">0 students</p>
+        </main>
+
+        <div id="editModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+            <div class="modal-card">
+                <div class="modal-head">
+                    <h2 id="editModalTitle" class="section-title" style="margin:0;">Edit Student</h2>
+                    <button id="closeModalBtn" class="btn btn-secondary btn-sm" type="button">Close</button>
+                </div>
+
+                <form id="editStudentForm" class="form-grid" novalidate>
+                    <div class="form-field">
+                        <label for="editName">Full Name</label>
+                        <input id="editName" name="name" type="text" minlength="2" required>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="editEmail">Email</label>
+                        <input id="editEmail" name="email" type="email" required>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="editCourse">Course</label>
+                        <select id="editCourse" name="course" required>
+                            <option value="">Choose a course</option>
+                            <option>Computer Science</option>
+                            <option>Information Technology</option>
+                            <option>Software Engineering</option>
+                            <option>Data Science</option>
+                            <option>Cyber Security</option>
+                            <option>Business Administration</option>
+                            <option>Mechanical Engineering</option>
+                            <option>Electrical Engineering</option>
+                        </select>
+                    </div>
+
+                    <div id="editMessage"></div>
+
+                    <div class="btn-row">
+                        <button id="saveEditBtn" class="btn btn-primary" type="submit">Save Changes</button>
+                        <button class="btn btn-secondary" type="button" id="cancelEditBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <footer class="footer">
+            You can now edit or delete students directly from this page.
+        </footer>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        const tbody = document.getElementById('studentsTableBody');
+        const quickSearchInput = document.getElementById('quickSearch');
+        const messageBox = document.getElementById('tableMessage');
+        const recordCount = document.getElementById('recordCount');
+        const refreshBtn = document.getElementById('refreshBtn');
+
+        const editModal = document.getElementById('editModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const editForm = document.getElementById('editStudentForm');
+        const editMessage = document.getElementById('editMessage');
+        const saveEditBtn = document.getElementById('saveEditBtn');
+
+        let allStudents = [];
+        let activeEditStudentId = null;
+
+        function updateCount(count) {
+            recordCount.textContent = `${count} student${count === 1 ? '' : 's'}`;
+        }
+
+        function renderRows(students) {
+            if (students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No students found.</td></tr>';
+                updateCount(0);
+                return;
+            }
+
+            tbody.innerHTML = students.map((student) => {
+                return `
+                    <tr>
+                        <td>${student.id}</td>
+                        <td>${StudentApp.utils.escapeHtml(student.name)}</td>
+                        <td>${StudentApp.utils.escapeHtml(student.email)}</td>
+                        <td>${StudentApp.utils.escapeHtml(student.course)}</td>
+                        <td>${StudentApp.utils.formatDate(student.created_at)}</td>
+                        <td class="btn-row">
+                            <button class="btn btn-secondary btn-sm" data-edit-id="${student.id}" type="button">Edit</button>
+                            <button class="btn btn-danger btn-sm" data-delete-id="${student.id}" type="button">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            updateCount(students.length);
+        }
+
+        function getStudentById(studentId) {
+            return allStudents.find((student) => Number(student.id) === Number(studentId));
+        }
+
+        async function loadStudents() {
+            StudentApp.utils.clearMessage(messageBox);
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = 'Refreshing...';
+
+            try {
+                const response = await StudentApp.api.list();
+                allStudents = response.data || [];
+                filterRows();
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state">${StudentApp.utils.escapeHtml(error.message)}</td></tr>`;
+                updateCount(0);
+                StudentApp.utils.renderMessage(messageBox, 'error', error.message);
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = 'Refresh';
+            }
+        }
+
+        function filterRows() {
+            const searchTerm = quickSearchInput.value.trim().toLowerCase();
+
+            if (!searchTerm) {
+                renderRows(allStudents);
+                return;
+            }
+
+            const filtered = allStudents.filter((student) => {
+                return (
+                    student.name.toLowerCase().includes(searchTerm) ||
+                    student.email.toLowerCase().includes(searchTerm) ||
+                    student.course.toLowerCase().includes(searchTerm)
+                );
+            });
+
+            renderRows(filtered);
+        }
+
+        function openEditModal(student) {
+            activeEditStudentId = student.id;
+            editForm.reset();
+            StudentApp.utils.clearMessage(editMessage);
+
+            document.getElementById('editName').value = student.name || '';
+            document.getElementById('editEmail').value = student.email || '';
+            document.getElementById('editCourse').value = student.course || '';
+
+            editModal.classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            activeEditStudentId = null;
+            editForm.reset();
+            StudentApp.utils.clearMessage(editMessage);
+            editModal.classList.add('hidden');
+        }
+
+        function validateEditPayload(payload) {
+            if (!payload.name || payload.name.length < 2) {
+                return 'Please enter a valid name (minimum 2 characters).';
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(payload.email)) {
+                return 'Please enter a valid email address.';
+            }
+
+            if (!payload.course) {
+                return 'Please select a course.';
+            }
+
+            return null;
+        }
+
+        async function handleDelete(studentId) {
+            const shouldDelete = window.confirm('Delete this student permanently?');
+            if (!shouldDelete) {
+                return;
+            }
+
+            try {
+                await StudentApp.api.remove(studentId);
+                StudentApp.utils.renderMessage(messageBox, 'success', 'Student deleted successfully.');
+                await loadStudents();
+            } catch (error) {
+                StudentApp.utils.renderMessage(messageBox, 'error', error.message);
+            }
+        }
+
+        editForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            StudentApp.utils.clearMessage(editMessage);
+
+            if (!activeEditStudentId) {
+                StudentApp.utils.renderMessage(editMessage, 'error', 'No student selected for update.');
+                return;
+            }
+
+            const payload = {
+                name: document.getElementById('editName').value.trim(),
+                email: document.getElementById('editEmail').value.trim(),
+                course: document.getElementById('editCourse').value.trim()
+            };
+
+            const validationError = validateEditPayload(payload);
+            if (validationError) {
+                StudentApp.utils.renderMessage(editMessage, 'error', validationError);
+                return;
+            }
+
+            saveEditBtn.disabled = true;
+            saveEditBtn.textContent = 'Saving...';
+
+            try {
+                await StudentApp.api.update(activeEditStudentId, payload);
+                closeEditModal();
+                StudentApp.utils.renderMessage(messageBox, 'success', 'Student updated successfully.');
+                await loadStudents();
+            } catch (error) {
+                StudentApp.utils.renderMessage(editMessage, 'error', error.message);
+            } finally {
+                saveEditBtn.disabled = false;
+                saveEditBtn.textContent = 'Save Changes';
+            }
+        });
+
+        tbody.addEventListener('click', (event) => {
+            const editButton = event.target.closest('[data-edit-id]');
+            if (editButton) {
+                const studentId = Number(editButton.getAttribute('data-edit-id'));
+                const student = getStudentById(studentId);
+
+                if (!student) {
+                    StudentApp.utils.renderMessage(messageBox, 'error', 'Student data not found for editing.');
+                    return;
+                }
+
+                openEditModal(student);
+                return;
+            }
+
+            const deleteButton = event.target.closest('[data-delete-id]');
+            if (!deleteButton) {
+                return;
+            }
+
+            const studentId = Number(deleteButton.getAttribute('data-delete-id'));
+            if (!studentId) {
+                return;
+            }
+
+            handleDelete(studentId);
+        });
+
+        closeModalBtn.addEventListener('click', closeEditModal);
+        cancelEditBtn.addEventListener('click', closeEditModal);
+
+        editModal.addEventListener('click', (event) => {
+            if (event.target === editModal) {
+                closeEditModal();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !editModal.classList.contains('hidden')) {
+                closeEditModal();
+            }
+        });
+
+        quickSearchInput.addEventListener('input', filterRows);
+        refreshBtn.addEventListener('click', loadStudents);
+
+        document.addEventListener('DOMContentLoaded', loadStudents);
+    </script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Student</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="layout">
+        <header class="topbar">
+            <div class="brand">
+                <span class="brand-tag">Enrollment</span>
+                <h1>Add New Student</h1>
+                <p>Create a record and save it directly to MySQL.</p>
+            </div>
+            <nav class="menu" aria-label="Main navigation">
+                <a href="/index.html">Dashboard</a>
+                <a class="active" href="/add-student.html">Add Student</a>
+                <a href="/view-students.html">View Students</a>
+                <a href="/search-students.html">Search</a>
+            </nav>
+        </header>
+
+        <main class="grid grid-2">
+            <section class="card">
+                <h2 class="section-title">Student Registration Form</h2>
+                <p class="section-subtitle">All fields are required. Duplicate emails are blocked automatically.</p>
+
+                <form id="studentForm" class="form-grid" novalidate>
+                    <div class="form-field">
+                        <label for="name">Full Name</label>
+                        <input id="name" name="name" type="text" minlength="2" placeholder="e.g. Alex Johnson" required>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="email">Email</label>
+                        <input id="email" name="email" type="email" placeholder="e.g. alex@example.com" required>
+                    </div>
+
+                    <div class="form-field">
+                        <label for="course">Course</label>
+                        <select id="course" name="course" required>
+                            <option value="">Choose a course</option>
+                            <option>Computer Science</option>
+                            <option>Information Technology</option>
+                            <option>Software Engineering</option>
+                            <option>Data Science</option>
+                            <option>Cyber Security</option>
+                            <option>Business Administration</option>
+                            <option>Mechanical Engineering</option>
+                            <option>Electrical Engineering</option>
+                        </select>
+                    </div>
+
+                    <div class="btn-row">
+                        <button id="submitButton" class="btn btn-primary" type="submit">Save Student</button>
+                        <button class="btn btn-secondary" type="reset">Clear Form</button>
+                    </div>
+                </form>
+
+                <div id="formMessage" aria-live="polite"></div>
+            </section>
+
+            <aside class="card">
+                <h2 class="panel-title">Before You Submit</h2>
+                <div class="helper-box">
+                    <strong>Validation checklist:</strong>
+                    <ul>
+                        <li>Name must be at least 2 characters.</li>
+                        <li>Email must be in valid format.</li>
+                        <li>Course must be selected.</li>
+                        <li>Email should be unique.</li>
+                    </ul>
+                </div>
+                <p class="small-muted" style="margin-top:14px;">
+                    The submit button sends data to <code>/api/students</code> using a JSON payload.
+                    If the backend or DB fails, the exact error will be shown here.
+                </p>
+            </aside>
+        </main>
+
+        <footer class="footer">
+            Tip: after adding a student, open View Students to verify the record.
+        </footer>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        const form = document.getElementById('studentForm');
+        const messageBox = document.getElementById('formMessage');
+        const submitButton = document.getElementById('submitButton');
+
+        function getFormPayload() {
+            return {
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                course: document.getElementById('course').value.trim()
+            };
+        }
+
+        function validatePayload(payload) {
+            if (!payload.name || payload.name.length < 2) {
+                return 'Please enter a valid name (minimum 2 characters).';
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(payload.email)) {
+                return 'Please enter a valid email address.';
+            }
+
+            if (!payload.course) {
+                return 'Please select a course.';
+            }
+
+            return null;
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            StudentApp.utils.clearMessage(messageBox);
+
+            const payload = getFormPayload();
+            const validationError = validatePayload(payload);
+
+            if (validationError) {
+                StudentApp.utils.renderMessage(messageBox, 'error', validationError);
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
+
+            try {
+                const response = await StudentApp.api.create(payload);
+                StudentApp.utils.renderMessage(
+                    messageBox,
+                    'success',
+                    `${response.data.name} was added successfully.`
+                );
+                form.reset();
+            } catch (error) {
+                StudentApp.utils.renderMessage(messageBox, 'error', error.message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Save Student';
+            }
+        });
+    </script>
+</body>
+</html>
